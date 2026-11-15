@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#14245c">
+  <meta name="description" content="Batloung Farm fresh produce distribution management system for suppliers, stock, vendors, purchases, sales and payments.">
+  <title>Batloung Farm Distribution System</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231c3585'/%3E%3Cpath d='M32 48V29M32 34c-8 0-15-5-15-14 9-1 15 4 15 14zm0-6c7 0 13-5 13-13-8-1-13 4-13 13z' fill='none' stroke='%23dbe6ff' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/dashboard" data-nav>
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="28" height="28">
+            <path d="M32 48V29M32 34c-8 0-15-5-15-14 9-1 15 4 15 14zm0-6c7 0 13-5 13-13-8-1-13 4-13 13z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="brand-copy">
+          <strong>Batloung Farm</strong>
+          <small>Distribution System</small>
+        </span>
+      </a>
+
+      <nav class="nav" id="mainNav" aria-label="Main navigation"></nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-card">
+          <span class="sidebar-card-icon" id="sidebarCardIcon"></span>
+          <div>
+            <strong>Fresh produce hub</strong>
+            <p>Maseru, Lesotho</p>
+          </div>
+        </div>
+        <p class="sidebar-version">Batloung Farm &middot; v1.0</p>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuToggle" aria-label="Open navigation">
+          <span id="menuIcon"></span>
+        </button>
+        <div class="topbar-title">
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSubtitle">A clear view of the farm distribution operation.</p>
+        </div>
+        <div class="topbar-actions">
+          <span class="date-chip" id="todayChip"></span>
+          <span class="avatar" title="Administrator">BF</span>
+        </div>
+      </header>
+
+      <main id="page" class="page" aria-live="polite"></main>
+    </div>
+  </div>
+
+  <div id="modalRoot"></div>
+  <div id="toastRoot" class="toast-root" aria-live="polite"></div>
+
+  <noscript>
+    <div class="noscript">This application requires JavaScript to be enabled.</div>
+  </noscript>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
