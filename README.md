@@ -6,6 +6,8 @@ The application is a Node.js/Express REST API backed by MySQL 8 with a responsiv
 
 **Local URL:** http://localhost:3000
 
+**Demonstration video:** https://batloung-farm-demo-video.netlify.app
+
 ## Features
 
 - Supplier management across all nine provinces (create, view, edit, delete, search).
