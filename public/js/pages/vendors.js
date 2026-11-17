@@ -66,6 +66,7 @@ export default {
             <td class="nowrap">${escapeHtml(vendor.phone_number)}</td>
             <td>${escapeHtml(vendor.location)}</td>
             <td class="nowrap">${formatDate(vendor.registration_date)}</td>
+            <td class="num">${money(vendor.settled_amount)}</td>
             <td class="num">${Number(vendor.outstanding_balance) > 0 ? `<span class="badge unpaid">${money(vendor.outstanding_balance)}</span>` : '<span class="table-sub">&mdash;</span>'}</td>
             <td>
               <div class="actions">
@@ -81,14 +82,14 @@ export default {
 
     function vendorTable(vendors) {
       if (!vendors.length) {
-        return `<div class="table-wrap"><table><tbody>${tableEmpty(6, 'No vendors found', 'No vendors match these filters.', 'vendors')}</tbody></table></div>`;
+        return `<div class="table-wrap"><table><tbody>${tableEmpty(7, 'No vendors found', 'No vendors match these filters.', 'vendors')}</tbody></table></div>`;
       }
 
       return `
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>Vendor</th><th>Phone</th><th>Location</th><th>Registered</th><th class="num">Outstanding</th><th></th></tr>
+              <tr><th>Vendor</th><th>Phone</th><th>Location</th><th>Registered</th><th class="num">Settled</th><th class="num">Outstanding</th><th></th></tr>
             </thead>
             <tbody>${vendorRows(vendors)}</tbody>
           </table>

@@ -3,6 +3,8 @@ const { pool } = require('../config/db');
 const VENDOR_SELECT = `
   SELECT v.vendor_id, v.vendor_name, v.phone_number, v.location, v.latitude, v.longitude,
          v.registration_date, v.created_at,
+         COALESCE((SELECT SUM(s.amount_paid)
+                   FROM sales s WHERE s.vendor_id = v.vendor_id), 0) AS settled_amount,
          COALESCE((SELECT SUM(s.total_amount - s.amount_paid)
                    FROM sales s WHERE s.vendor_id = v.vendor_id), 0) AS outstanding_balance,
          (SELECT COUNT(*) FROM sales s WHERE s.vendor_id = v.vendor_id) AS sales_count
