@@ -17,6 +17,23 @@ import {
   resetButton,
   errorState
 } from '../ui.js';
+import { mountMapPicker, mountMapView } from '../map.js';
+
+function coordinateText(latitude, longitude) {
+  return `${Number(latitude).toFixed(6)}, ${Number(longitude).toFixed(6)}`;
+}
+
+function hasCoordinates(vendor) {
+  return (
+    vendor &&
+    vendor.latitude !== null &&
+    vendor.latitude !== undefined &&
+    vendor.latitude !== '' &&
+    vendor.longitude !== null &&
+    vendor.longitude !== undefined &&
+    vendor.longitude !== ''
+  );
+}
 
 export default {
   async render(el) {
@@ -219,7 +236,7 @@ export default {
       if (button.dataset.action === 'edit') {
         try {
           const response = await api.get(`/vendors/${id}`);
-          openVendorForm(response.data);
+          await openVendorForm(response.data);
         } catch (error) {
           toast(error.message, 'error');
         }
@@ -231,9 +248,16 @@ export default {
       try {
         const response = await api.get(`/vendors/${id}`);
         const vendor = response.data;
+        const pinned = hasCoordinates(vendor);
+        const coordinates = pinned ? coordinateText(vendor.latitude, vendor.longitude) : '';
+        let mapView = null;
+
         const overlay = openModal({
           title: vendor.vendor_name,
           subtitle: `Vendor #${vendor.vendor_id} · ${vendor.location}`,
+          onClose: () => {
+            if (mapView) mapView.destroy();
+          },
           body: `
             <div class="summary-strip">
               <div><span class="label">Outstanding balance</span><span class="value ${Number(vendor.outstanding_balance) > 0 ? 'text-danger' : 'text-success'}">${money(vendor.outstanding_balance)}</span></div>
@@ -243,23 +267,67 @@ export default {
             <div class="detail-grid">
               <div class="detail-item"><span class="label">Vendor name</span><span class="value">${escapeHtml(vendor.vendor_name)}</span></div>
               <div class="detail-item"><span class="label">Phone number</span><span class="value">${escapeHtml(vendor.phone_number)}</span></div>
-              <div class="detail-item span-2"><span class="label">Location</span><span class="value">${escapeHtml(vendor.location)}</span></div>
-            </div>`,
+              <div class="detail-item ${pinned ? '' : 'span-2'}"><span class="label">Location</span><span class="value">${escapeHtml(vendor.location)}</span></div>
+              ${pinned ? `<div class="detail-item"><span class="label">Map coordinates</span><span class="value small">${escapeHtml(coordinates)}</span></div>` : ''}
+            </div>
+            ${
+              pinned
+                ? `<div class="vendor-map-block">
+                     <div class="map-picker map-view" id="vendorViewMap">Loading map...</div>
+                     <div class="map-meta">
+                       <span class="map-coords">Pinned at ${escapeHtml(coordinates)}</span>
+                       <a class="btn btn-secondary btn-sm" href="https://www.google.com/maps?q=${encodeURIComponent(coordinates)}" target="_blank" rel="noopener">${icon('location', 15)} Open in Google Maps</a>
+                     </div>
+                   </div>`
+                : ''
+            }`,
           footer: `
             <button type="button" class="btn btn-secondary" data-close>Close</button>
             <button type="button" class="btn btn-primary" data-edit-vendor>${icon('edit', 16)} Edit vendor</button>`
         });
-        overlay.querySelector('[data-edit-vendor]').addEventListener('click', () => openVendorForm(vendor));
+
+        if (pinned) {
+          mountMapView(overlay.querySelector('#vendorViewMap'), Number(vendor.latitude), Number(vendor.longitude))
+            .then((instance) => {
+              if (!overlay.isConnected) {
+                instance.destroy();
+                return;
+              }
+              mapView = instance;
+            })
+            .catch(() => {
+              const mapElement = overlay.querySelector('#vendorViewMap');
+              if (mapElement) {
+                mapElement.classList.add('map-unavailable');
+                mapElement.textContent = 'Map unavailable. Open the coordinates in Google Maps instead.';
+              }
+            });
+        }
+
+        overlay.querySelector('[data-edit-vendor]').addEventListener('click', async () => {
+          closeModal();
+          await openVendorForm(vendor);
+        });
       } catch (error) {
         toast(error.message, 'error');
       }
     }
 
-    function openVendorForm(vendor = null) {
+    async function openVendorForm(vendor = null) {
       const isEdit = Boolean(vendor);
+      const pinned = hasCoordinates(vendor);
+      const initialLatitude = pinned ? Number(vendor.latitude) : null;
+      const initialLongitude = pinned ? Number(vendor.longitude) : null;
+      let picker = null;
+      let closed = false;
+
       const overlay = openModal({
         title: isEdit ? 'Edit vendor' : 'Register vendor',
         subtitle: isEdit ? vendor.vendor_name : 'Add a street vendor or small retailer.',
+        onClose: () => {
+          closed = true;
+          if (picker) picker.destroy();
+        },
         body: `
           <form id="vendorForm" class="form-grid">
             <div class="form-field span-2">
@@ -271,12 +339,24 @@ export default {
               <input id="vendorPhone" name="phone_number" maxlength="20" required value="${escapeHtml(vendor?.phone_number || '')}" placeholder="+266 5800 1122">
             </div>
             <div class="form-field">
-              <label for="vendorLocation">Location <span class="req">*</span></label>
-              <input id="vendorLocation" name="location" maxlength="150" required value="${escapeHtml(vendor?.location || '')}" placeholder="e.g. Maseru CBD">
-            </div>
-            <div class="form-field">
               <label for="vendorDate">Registration date <span class="req">*</span></label>
               <input id="vendorDate" name="registration_date" type="date" required value="${dateInputValue(vendor?.registration_date) || todayISO()}">
+            </div>
+            <div class="form-field span-2">
+              <label for="vendorLocation">Location <span class="req">*</span></label>
+              <input id="vendorLocation" name="location" maxlength="150" required value="${escapeHtml(vendor?.location || '')}" placeholder="e.g. Maseru CBD">
+              <span class="form-help">Type the location or select it on the map below.</span>
+            </div>
+            <div class="form-field span-2">
+              <label>Location on map</label>
+              <div class="map-picker" id="vendorMap">Loading map...</div>
+              <div class="map-meta">
+                <span class="map-coords" id="vendorCoords">${pinned ? `Pinned at ${escapeHtml(coordinateText(initialLatitude, initialLongitude))}` : 'No pin selected'}</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="clearVendorPin">${icon('close', 14)} Clear pin</button>
+              </div>
+              <span class="form-help">Click the map to drop a pin and drag it to fine-tune. The location field fills automatically.</span>
+              <input type="hidden" name="latitude" id="vendorLat" value="${pinned ? escapeHtml(String(vendor.latitude)) : ''}">
+              <input type="hidden" name="longitude" id="vendorLng" value="${pinned ? escapeHtml(String(vendor.longitude)) : ''}">
             </div>
           </form>`,
         footer: `
@@ -286,6 +366,51 @@ export default {
 
       const form = overlay.querySelector('#vendorForm');
       const saveButton = overlay.querySelector('#saveVendorBtn');
+      const locationInput = overlay.querySelector('#vendorLocation');
+      const latitudeInput = overlay.querySelector('#vendorLat');
+      const longitudeInput = overlay.querySelector('#vendorLng');
+      const coordsLabel = overlay.querySelector('#vendorCoords');
+      const clearButton = overlay.querySelector('#clearVendorPin');
+      const mapElement = overlay.querySelector('#vendorMap');
+
+      function showCoordinates(latitude, longitude) {
+        if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) {
+          latitudeInput.value = '';
+          longitudeInput.value = '';
+          coordsLabel.textContent = 'No pin selected';
+          return;
+        }
+        latitudeInput.value = Number(latitude).toFixed(6);
+        longitudeInput.value = Number(longitude).toFixed(6);
+        coordsLabel.textContent = `Pinned at ${coordinateText(latitude, longitude)}`;
+      }
+
+      clearButton.addEventListener('click', () => {
+        if (picker) picker.clear();
+        showCoordinates(null, null);
+      });
+
+      mountMapPicker({
+        container: mapElement,
+        latitude: initialLatitude,
+        longitude: initialLongitude,
+        onPoint: ({ latitude, longitude }) => showCoordinates(latitude, longitude),
+        onAddress: (address) => {
+          if (address && !closed) locationInput.value = address;
+        }
+      })
+        .then((instance) => {
+          if (closed) {
+            instance.destroy();
+            return;
+          }
+          picker = instance;
+        })
+        .catch(() => {
+          if (closed) return;
+          mapElement.classList.add('map-unavailable');
+          mapElement.textContent = 'Map unavailable offline. Type the location manually.';
+        });
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();

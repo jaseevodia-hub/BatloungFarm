@@ -87,11 +87,15 @@ CREATE TABLE vendors (
   vendor_name VARCHAR(120) NOT NULL,
   phone_number VARCHAR(20) NOT NULL,
   location VARCHAR(150) NOT NULL,
+  latitude DECIMAL(9, 6) NULL,
+  longitude DECIMAL(9, 6) NULL,
   registration_date DATE NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (vendor_id),
   UNIQUE KEY uq_vendors_phone (phone_number),
-  KEY idx_vendors_name (vendor_name)
+  KEY idx_vendors_name (vendor_name),
+  CONSTRAINT chk_vendors_latitude CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+  CONSTRAINT chk_vendors_longitude CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180)
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------

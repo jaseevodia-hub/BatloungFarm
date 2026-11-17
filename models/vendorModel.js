@@ -1,8 +1,8 @@
 const { pool } = require('../config/db');
 
 const VENDOR_SELECT = `
-  SELECT v.vendor_id, v.vendor_name, v.phone_number, v.location, v.registration_date,
-         v.created_at,
+  SELECT v.vendor_id, v.vendor_name, v.phone_number, v.location, v.latitude, v.longitude,
+         v.registration_date, v.created_at,
          COALESCE((SELECT SUM(s.total_amount - s.amount_paid)
                    FROM sales s WHERE s.vendor_id = v.vendor_id), 0) AS outstanding_balance,
          (SELECT COUNT(*) FROM sales s WHERE s.vendor_id = v.vendor_id) AS sales_count
@@ -36,9 +36,16 @@ async function findById(id) {
 
 async function create(data) {
   const [result] = await pool.execute(
-    `INSERT INTO vendors (vendor_name, phone_number, location, registration_date)
-     VALUES (?, ?, ?, ?)`,
-    [data.vendorName, data.phoneNumber, data.location, data.registrationDate]
+    `INSERT INTO vendors (vendor_name, phone_number, location, latitude, longitude, registration_date)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      data.vendorName,
+      data.phoneNumber,
+      data.location,
+      data.latitude ?? null,
+      data.longitude ?? null,
+      data.registrationDate
+    ]
   );
   return findById(result.insertId);
 }
@@ -50,6 +57,8 @@ async function update(id, fields) {
     vendorName: 'vendor_name',
     phoneNumber: 'phone_number',
     location: 'location',
+    latitude: 'latitude',
+    longitude: 'longitude',
     registrationDate: 'registration_date'
   };
 

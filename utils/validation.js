@@ -95,6 +95,15 @@ function positiveId(value, field = 'ID') {
   return positiveInteger(value, field);
 }
 
+function coordinate(value, field, limit) {
+  if (value === undefined || value === null || value === '') return null;
+  const number = Number(value);
+  if (!Number.isFinite(number) || Math.abs(number) > limit) {
+    throw ApiError.badRequest(`${field} must be a number between -${limit} and ${limit}.`);
+  }
+  return Math.round(number * 1000000) / 1000000;
+}
+
 function dateOnly(value, field = 'Date', { required = true } = {}) {
   if (value === undefined || value === null || value === '') {
     if (required) throw ApiError.badRequest(`${field} is required.`);
@@ -162,6 +171,7 @@ module.exports = {
   nonNegativeNumber,
   positiveMoney,
   positiveId,
+  coordinate,
   dateOnly,
   optionalDateRange,
   pricesObject,

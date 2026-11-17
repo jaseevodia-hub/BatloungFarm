@@ -1,6 +1,24 @@
 const vendorModel = require('../models/vendorModel');
 const ApiError = require('../utils/ApiError');
-const { requiredString, phoneNumber, positiveId, dateOnly } = require('../utils/validation');
+const {
+  requiredString,
+  phoneNumber,
+  positiveId,
+  coordinate,
+  dateOnly
+} = require('../utils/validation');
+
+function locationCoordinates(body) {
+  const hasLatitude = body.latitude !== undefined && body.latitude !== null;
+  const hasLongitude = body.longitude !== undefined && body.longitude !== null;
+  if (hasLatitude !== hasLongitude) {
+    throw ApiError.badRequest('Provide both latitude and longitude, or neither.');
+  }
+  return {
+    latitude: coordinate(body.latitude, 'Latitude', 90),
+    longitude: coordinate(body.longitude, 'Longitude', 180)
+  };
+}
 
 async function listVendors(req, res, next) {
   try {
@@ -24,10 +42,13 @@ async function getVendor(req, res, next) {
 
 async function createVendor(req, res, next) {
   try {
+    const coordinates = locationCoordinates(req.body);
     const data = {
       vendorName: requiredString(req.body.vendor_name, 'Vendor name', 120),
       phoneNumber: phoneNumber(req.body.phone_number, 'Phone number'),
       location: requiredString(req.body.location, 'Location', 150),
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
       registrationDate: dateOnly(
         req.body.registration_date || new Date().toISOString().slice(0, 10),
         'Registration date'
@@ -60,6 +81,11 @@ async function updateVendor(req, res, next) {
     }
     if (req.body.location !== undefined) {
       fields.location = requiredString(req.body.location, 'Location', 150);
+    }
+    if (req.body.latitude !== undefined || req.body.longitude !== undefined) {
+      const coordinates = locationCoordinates(req.body);
+      fields.latitude = coordinates.latitude;
+      fields.longitude = coordinates.longitude;
     }
     if (req.body.registration_date !== undefined) {
       fields.registrationDate = dateOnly(req.body.registration_date, 'Registration date');

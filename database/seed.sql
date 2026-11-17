@@ -48,14 +48,14 @@ VALUES
 
 -- Vendors in Lesotho
 INSERT INTO vendors
-  (vendor_id, vendor_name, phone_number, location, registration_date)
+  (vendor_id, vendor_name, phone_number, location, latitude, longitude, registration_date)
 VALUES
-  (1, 'Maseru Central Vendor', '+266 5800 1122', 'Maseru CBD', '2025-01-15'),
-  (2, 'Thabang Fruit Stall', '+266 6200 3344', 'Maseru Market', '2025-02-03'),
-  (3, 'Leribe Road Vendors', '+266 5700 5566', 'Leribe', '2025-03-20'),
-  (4, 'Mafeteng Street Trader', '+266 6300 7788', 'Mafeteng', '2025-05-11'),
-  (5, 'Roma Market Stall', '+266 5900 9900', 'Roma', '2025-07-08'),
-  (6, 'Mohale''s Hoek Fresh', '+266 6400 2233', 'Mohale''s Hoek', '2025-09-02');
+  (1, 'Maseru Central Vendor', '+266 5800 1122', 'Maseru CBD', -29.316700, 27.483300, '2025-01-15'),
+  (2, 'Thabang Fruit Stall', '+266 6200 3344', 'Maseru Market', -29.310000, 27.480000, '2025-02-03'),
+  (3, 'Leribe Road Vendors', '+266 5700 5566', 'Leribe', -28.871800, 28.045700, '2025-03-20'),
+  (4, 'Mafeteng Street Trader', '+266 6300 7788', 'Mafeteng', -29.823100, 27.237400, '2025-05-11'),
+  (5, 'Roma Market Stall', '+266 5900 9900', 'Roma', -29.446800, 27.708300, '2025-07-08'),
+  (6, 'Mohale''s Hoek Fresh', '+266 6400 2233', 'Mohale''s Hoek', -30.151000, 27.476900, '2025-09-02');
 
 -- Purchases
 INSERT INTO purchases (purchase_id, supplier_id, purchase_date, total_amount)

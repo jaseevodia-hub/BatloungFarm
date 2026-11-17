@@ -13,7 +13,7 @@ The application is a Node.js/Express REST API backed by MySQL 8 with a responsiv
 - Supplier management across all nine provinces (create, view, edit, delete, search).
 - Fruit catalogue with separate **SMALL**, **MEDIUM** and **LARGE** selling prices.
 - Stock tracked independently per fruit and packaging size.
-- Vendor management with contact search and outstanding balances.
+- Vendor management with contact search, outstanding balances and map-picked locations.
 - Multi-item purchases that atomically increase stock.
 - Multi-item sales that atomically decrease stock and reject the whole sale if any line has insufficient stock.
 - Server-calculated purchase and sale totals; client-entered totals are never trusted.
@@ -140,7 +140,7 @@ The schema is in `database/schema.sql`. Sample data is in `database/seed.sql`.
 | `suppliers` | Farm produce suppliers, unique business name and phone, province enum |
 | `fruits` | Fruit catalogue and available/unavailable status |
 | `fruit_prices` | One selling price per fruit and packaging size |
-| `vendors` | Produce buyers with unique phone numbers |
+| `vendors` | Produce buyers with unique phone numbers and optional map coordinates |
 | `stock` | One row per fruit and packaging size with non-negative quantity |
 | `purchases` | Purchase header with supplier, date and total |
 | `purchase_details` | Purchase line items with quantity, unit cost and size |
@@ -194,6 +194,10 @@ All responses are JSON. Success responses use `{ "success": true, ... }`; errors
 | `POST` | `/vendors` | Create a vendor |
 | `PUT` | `/vendors/:id` | Update a vendor |
 | `DELETE` | `/vendors/:id` | Delete a vendor with no sales |
+
+Vendor coordinates are optional. The vendor form shows an OpenStreetMap picker; clicking the map stores
+decimal degrees in `latitude`/`longitude` (both must be supplied together) and fills `location` from a reverse
+geocode. Vendors without a pin keep `NULL` coordinates.
 
 ### Purchases
 
