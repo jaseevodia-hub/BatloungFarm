@@ -99,7 +99,7 @@ async function dashboard(threshold) {
     pool.query(
       `SELECT COUNT(*) AS low_stock_count
        FROM stock s JOIN fruits f ON f.fruit_id = s.fruit_id
-       WHERE f.status = 'ACTIVE' AND s.available_quantity <= ?`,
+       WHERE f.status = 'AVAILABLE' AND s.available_quantity <= ?`,
       [threshold]
     ),
     pool.query(
@@ -120,7 +120,7 @@ async function dashboard(threshold) {
        JOIN fruits f ON f.fruit_id = s.fruit_id
        LEFT JOIN fruit_prices fp
          ON fp.fruit_id = s.fruit_id AND fp.packaging_size = s.packaging_size
-       WHERE f.status = 'ACTIVE' AND s.available_quantity <= ?
+       WHERE f.status = 'AVAILABLE' AND s.available_quantity <= ?
        ORDER BY s.available_quantity ASC, f.fruit_name ASC
        LIMIT 8`,
       [threshold]

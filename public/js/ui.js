@@ -108,6 +108,14 @@ export function todayISO() {
   return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
 }
 
+export function dateInputValue(value) {
+  if (!value) return '';
+  const date = toDate(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10);
+}
+
 export function sizeLabel(size) {
   const labels = { SMALL: 'Small', MEDIUM: 'Medium', LARGE: 'Large' };
   return labels[size] || size || '—';
@@ -134,14 +142,14 @@ export function statusBadge(status) {
     PAID: 'Paid',
     PARTIALLY_PAID: 'Partially paid',
     UNPAID: 'Unpaid',
-    ACTIVE: 'Active',
-    INACTIVE: 'Inactive'
+    AVAILABLE: 'Available',
+    UNAVAILABLE: 'Unavailable'
   };
   let css = 'neutral';
-  if (normalised === 'PAID' || normalised === 'ACTIVE') css = normalised === 'PAID' ? 'paid' : 'active';
+  if (normalised === 'PAID' || normalised === 'AVAILABLE') css = normalised === 'PAID' ? 'paid' : 'available';
   else if (normalised === 'PARTIALLY_PAID') css = 'partial';
   else if (normalised === 'UNPAID') css = 'unpaid';
-  else if (normalised === 'INACTIVE') css = 'inactive';
+  else if (normalised === 'UNAVAILABLE') css = 'unavailable';
   return `<span class="badge ${css}">${labels[normalised] || escapeHtml(status)}</span>`;
 }
 

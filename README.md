@@ -138,7 +138,7 @@ The schema is in `database/schema.sql`. Sample data is in `database/seed.sql`.
 | Table | Description |
 | --- | --- |
 | `suppliers` | Farm produce suppliers, unique business name and phone, province enum |
-| `fruits` | Fruit catalogue and active/inactive status |
+| `fruits` | Fruit catalogue and available/unavailable status |
 | `fruit_prices` | One selling price per fruit and packaging size |
 | `vendors` | Produce buyers with unique phone numbers |
 | `stock` | One row per fruit and packaging size with non-negative quantity |
@@ -176,7 +176,7 @@ All responses are JSON. Success responses use `{ "success": true, ... }`; errors
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/fruits?q=` | List/search fruits with prices and stock |
+| `GET` | `/fruits?q=&status=` | List/search fruits with prices and stock |
 | `GET` | `/fruits/:id` | Get one fruit |
 | `POST` | `/fruits` | Create a fruit with three prices and stock rows |
 | `PUT` | `/fruits/:id` | Update fruit details and/or prices |
@@ -202,6 +202,8 @@ All responses are JSON. Success responses use `{ "success": true, ... }`; errors
 | `GET` | `/purchases` | List purchases with supplier and line summary |
 | `GET` | `/purchases/:id` | Get a purchase and its line items |
 | `POST` | `/purchases` | Create a purchase and increase stock atomically |
+| `PUT` | `/purchases/:id` | Edit a purchase and adjust stock atomically |
+| `DELETE` | `/purchases/:id` | Delete a purchase and reverse its stock |
 
 Example purchase request:
 
@@ -223,6 +225,8 @@ Example purchase request:
 | `GET` | `/sales` | List sales with vendor, boxes and balance |
 | `GET` | `/sales/:id` | Get a sale and its line items |
 | `POST` | `/sales` | Create a sale, validate stock and decrease stock atomically |
+| `PUT` | `/sales/:id` | Edit a sale and adjust stock atomically |
+| `DELETE` | `/sales/:id` | Delete a sale, restore stock and remove its payments |
 
 Example credit sale:
 
@@ -250,7 +254,10 @@ Sale prices and totals are read from `fruit_prices`; the client cannot submit a 
 | `GET` | `/payments/summary` | Total collected and outstanding |
 | `GET` | `/payments/outstanding` | Outstanding balance by vendor |
 | `GET` | `/payments/outstanding-sales` | Individual sales with balances |
+| `GET` | `/payments/:id` | Get one payment with its sale balance |
 | `POST` | `/payments` | Record a cash or mobile-money payment |
+| `PUT` | `/payments/:id` | Edit a payment and recalculate its sale balance |
+| `DELETE` | `/payments/:id` | Delete a payment and recalculate its sale balance |
 
 Example payment:
 
@@ -283,6 +290,11 @@ Example payment:
 - A failed purchase rolls back its header, details and stock changes.
 - A sale checks every requested line with `SELECT ... FOR UPDATE` before writing anything.
 - If any line has insufficient stock, the whole sale is rejected; no partial sale and no negative stock can occur.
+- Editing a purchase or sale reverses the original stock effect and applies the new lines in one transaction.
+- A purchase edit or delete is blocked when its stock has already been sold, preventing negative stock.
+- Deleting a sale restores its stock; linked payments are removed by the database cascade.
+- Editing or deleting a payment recalculates the parent sale's amount paid and payment status.
+- Every record page (suppliers, fruits, vendors, purchases, sales, payments) provides view, edit and delete actions.
 - Payment status is derived from the server-side total and amount paid:
   - `amount_paid = 0` and total greater than zero: `UNPAID`
   - `0 < amount_paid < total`: `PARTIALLY_PAID`

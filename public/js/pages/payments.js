@@ -13,6 +13,7 @@ import {
   toast,
   openModal,
   closeModal,
+  confirmDialog,
   setButtonBusy,
   resetButton
 } from '../ui.js';
@@ -101,7 +102,7 @@ export default {
       return `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Date</th><th>Sale</th><th>Vendor</th><th>Method</th><th>Reference</th><th class="num">Amount</th></tr></thead>
+            <thead><tr><th>Date</th><th>Sale</th><th>Vendor</th><th>Method</th><th>Reference</th><th class="num">Amount</th><th></th></tr></thead>
             <tbody>
               ${rows
                 .map(
@@ -113,6 +114,13 @@ export default {
                     <td><span class="chip">${methodLabel(payment.payment_method)}</span></td>
                     <td class="text-muted">${escapeHtml(payment.reference || '—')}</td>
                     <td class="num money">${money(payment.amount)}</td>
+                    <td>
+                      <div class="actions">
+                        <button class="action-btn" data-action="view" data-id="${payment.payment_id}" title="View payment">${icon('eye', 15)}</button>
+                        <button class="action-btn" data-action="edit" data-id="${payment.payment_id}" title="Edit payment">${icon('edit', 15)}</button>
+                        <button class="action-btn danger" data-action="delete" data-id="${payment.payment_id}" title="Delete payment">${icon('trash', 15)}</button>
+                      </div>
+                    </td>
                   </tr>`
                 )
                 .join('')}
@@ -312,7 +320,130 @@ export default {
 
       methodFilter.addEventListener('change', renderHistory);
       searchFilter.addEventListener('input', renderHistory);
+      tableRoot.addEventListener('click', handlePaymentAction);
       renderHistory();
+    }
+
+    async function handlePaymentAction(event) {
+      const button = event.target.closest('[data-action]');
+      if (!button) return;
+      const id = Number(button.dataset.id);
+
+      if (button.dataset.action === 'view') await viewPayment(id);
+      if (button.dataset.action === 'edit') await editPayment(id);
+      if (button.dataset.action === 'delete') await deletePayment(id);
+    }
+
+    async function viewPayment(id) {
+      try {
+        const response = await api.get(`/payments/${id}`);
+        const payment = response.data;
+        openModal({
+          title: `Payment #${payment.payment_id}`,
+          subtitle: `${payment.vendor_name} · ${formatDateTime(payment.payment_date)}`,
+          body: `
+            <div class="summary-strip">
+              <div><span class="label">Amount paid</span><span class="value text-success">${money(payment.amount)}</span></div>
+              <div><span class="label">Sale total</span><span class="value">${money(payment.total_amount)}</span></div>
+              <div><span class="label">Sale balance</span><span class="value ${Number(payment.total_amount) - Number(payment.amount_paid) > 0 ? 'text-danger' : 'text-success'}">${money(Number(payment.total_amount) - Number(payment.amount_paid))}</span></div>
+            </div>
+            <div class="detail-grid">
+              <div class="detail-item"><span class="label">Sale</span><span class="value">#${payment.sale_id}</span></div>
+              <div class="detail-item"><span class="label">Vendor</span><span class="value">${escapeHtml(payment.vendor_name)}</span></div>
+              <div class="detail-item"><span class="label">Phone</span><span class="value">${escapeHtml(payment.phone_number)}</span></div>
+              <div class="detail-item"><span class="label">Payment method</span><span class="value">${methodLabel(payment.payment_method)}</span></div>
+              <div class="detail-item"><span class="label">Reference</span><span class="value">${escapeHtml(payment.reference || '—')}</span></div>
+              <div class="detail-item"><span class="label">Payment status</span><span class="value">${statusBadge(payment.payment_status)}</span></div>
+            </div>`,
+          footer: `<button type="button" class="btn btn-secondary" data-close>Close</button>`
+        });
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    }
+
+    async function editPayment(id) {
+      let payment;
+      try {
+        const response = await api.get(`/payments/${id}`);
+        payment = response.data;
+      } catch (error) {
+        toast(error.message, 'error');
+        return;
+      }
+
+      const maxAmount = Math.max(
+        Number(payment.total_amount) - (Number(payment.amount_paid) - Number(payment.amount)),
+        0
+      );
+
+      const overlay = openModal({
+        title: 'Edit payment',
+        subtitle: `Payment #${payment.payment_id} · ${payment.vendor_name}`,
+        body: `
+          <form id="editPaymentForm" class="form-grid">
+            <div class="form-field">
+              <label for="editPaymentAmount">Payment amount <span class="req">*</span></label>
+              <div class="input-prefix"><span>M</span><input id="editPaymentAmount" name="amount" type="number" min="0.01" max="${maxAmount.toFixed(2)}" step="0.01" value="${Number(payment.amount).toFixed(2)}" required></div>
+            </div>
+            <div class="form-field">
+              <label for="editPaymentMethod">Payment method <span class="req">*</span></label>
+              <select id="editPaymentMethod" name="payment_method" required>
+                <option value="CASH" ${payment.payment_method === 'CASH' ? 'selected' : ''}>Cash</option>
+                <option value="MOBILE_MONEY" ${payment.payment_method === 'MOBILE_MONEY' ? 'selected' : ''}>Mobile money</option>
+              </select>
+            </div>
+            <div class="form-field span-2">
+              <label for="editPaymentReference">Reference</label>
+              <input id="editPaymentReference" name="reference" maxlength="80" value="${escapeHtml(payment.reference || '')}" placeholder="e.g. M-PESA-1024">
+            </div>
+            <div class="form-field span-2">
+              <span class="form-help">The maximum for this payment is ${money(maxAmount)} so the sale total is not exceeded.</span>
+            </div>
+          </form>`,
+        footer: `
+          <button type="button" class="btn btn-secondary" data-close>Cancel</button>
+          <button type="submit" form="editPaymentForm" class="btn btn-primary" id="saveEditPaymentBtn">${icon('check', 16)} Save changes</button>`
+      });
+
+      const form = overlay.querySelector('#editPaymentForm');
+      const saveButton = overlay.querySelector('#saveEditPaymentBtn');
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        setButtonBusy(saveButton, 'Saving...');
+        try {
+          const response = await api.put(`/payments/${payment.payment_id}`, {
+            amount: Number(data.amount),
+            payment_method: data.payment_method,
+            reference: data.reference
+          });
+          toast(response.message || 'Payment updated successfully.');
+          closeModal();
+          await refresh();
+        } catch (error) {
+          toast(error.message, 'error');
+          resetButton(saveButton);
+        }
+      });
+    }
+
+    async function deletePayment(id) {
+      const confirmed = await confirmDialog({
+        title: 'Delete payment',
+        message: 'Delete this payment? The linked sale balance and payment status will be recalculated.',
+        confirmText: 'Delete payment'
+      });
+      if (!confirmed) return;
+
+      try {
+        const response = await api.delete(`/payments/${id}`);
+        toast(response.message || 'Payment deleted.');
+        await refresh();
+      } catch (error) {
+        toast(error.message, 'error');
+      }
     }
 
     function attachSalePayButtons(root) {

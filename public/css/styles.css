@@ -974,7 +974,7 @@ th.num {
 }
 
 .badge.paid,
-.badge.active {
+.badge.available {
   background: var(--brand-100);
   color: var(--brand-700);
 }
@@ -989,7 +989,7 @@ th.num {
   color: var(--red);
 }
 
-.badge.inactive {
+.badge.unavailable {
   background: #eef1ef;
   color: #78839b;
 }

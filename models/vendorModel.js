@@ -14,8 +14,11 @@ async function findAll(search) {
   const params = [];
 
   if (search) {
-    conditions.push('(v.vendor_name LIKE ? OR v.phone_number LIKE ? OR v.location LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    const phoneTerm = `%${search.replace(/\s+/g, '')}%`;
+    conditions.push(
+      "(v.vendor_name LIKE ? OR REPLACE(v.phone_number, ' ', '') LIKE ? OR v.location LIKE ?)"
+    );
+    params.push(`%${search}%`, phoneTerm, `%${search}%`);
   }
 
   let sql = VENDOR_SELECT;

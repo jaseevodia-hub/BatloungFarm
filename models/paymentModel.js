@@ -3,6 +3,7 @@ const { pool } = require('../config/db');
 async function history({ search } = {}) {
   let sql = `SELECT pay.payment_id, pay.sale_id, pay.amount, pay.payment_method,
                     pay.payment_date, pay.reference,
+                    s.total_amount, s.amount_paid,
                     v.vendor_name, v.phone_number
              FROM payments pay
              JOIN sales s ON s.sale_id = pay.sale_id
@@ -47,6 +48,42 @@ async function outstandingByVendor() {
   return rows;
 }
 
+async function findById(id) {
+  const [rows] = await pool.execute(
+    `SELECT pay.payment_id, pay.sale_id, pay.amount, pay.payment_method,
+            pay.payment_date, pay.reference,
+            s.total_amount, s.amount_paid, s.payment_status,
+            v.vendor_name, v.phone_number
+     FROM payments pay
+     JOIN sales s ON s.sale_id = pay.sale_id
+     JOIN vendors v ON v.vendor_id = s.vendor_id
+     WHERE pay.payment_id = ?`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+async function findByIdForUpdate(connection, id) {
+  const [rows] = await connection.execute(
+    `SELECT payment_id, sale_id, amount, payment_method, payment_date, reference
+     FROM payments WHERE payment_id = ? FOR UPDATE`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+async function update(connection, id, { amount, paymentMethod, reference }) {
+  await connection.execute(
+    `UPDATE payments SET amount = ?, payment_method = ?, reference = ? WHERE payment_id = ?`,
+    [amount, paymentMethod, reference, id]
+  );
+}
+
+async function remove(connection, id) {
+  const [result] = await connection.execute('DELETE FROM payments WHERE payment_id = ?', [id]);
+  return result.affectedRows > 0;
+}
+
 async function create(connection, { saleId, amount, paymentMethod, reference }) {
   const [result] = await connection.execute(
     `INSERT INTO payments (sale_id, amount, payment_method, reference)
@@ -77,6 +114,10 @@ module.exports = {
   history,
   outstandingSales,
   outstandingByVendor,
+  findById,
+  findByIdForUpdate,
+  update,
+  remove,
   create,
   summary
 };

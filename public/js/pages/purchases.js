@@ -10,11 +10,13 @@ import {
   formatDate,
   formatDateTime,
   todayISO,
+  dateInputValue,
   loadingState,
   tableEmpty,
   toast,
   openModal,
   closeModal,
+  confirmDialog,
   setButtonBusy,
   resetButton,
   errorState
@@ -56,7 +58,13 @@ export default {
             <td class="num">${quantity(purchase.item_lines)}</td>
             <td class="num">${quantity(purchase.total_boxes)}</td>
             <td class="num money">${money(purchase.total_amount)}</td>
-            <td><div class="actions"><button class="action-btn" data-action="view" data-id="${purchase.purchase_id}" title="View purchase">${icon('eye', 15)}</button></div></td>
+            <td>
+              <div class="actions">
+                <button class="action-btn" data-action="view" data-id="${purchase.purchase_id}" title="View purchase">${icon('eye', 15)}</button>
+                <button class="action-btn" data-action="edit" data-id="${purchase.purchase_id}" title="Edit purchase">${icon('edit', 15)}</button>
+                <button class="action-btn danger" data-action="delete" data-id="${purchase.purchase_id}" title="Delete purchase">${icon('trash', 15)}</button>
+              </div>
+            </td>
           </tr>`
         )
         .join('');
@@ -138,7 +146,7 @@ export default {
         </div>`;
 
       contentRoot.querySelector('#openPurchaseHistory').addEventListener('click', openPurchaseHistory);
-      contentRoot.querySelector('#openPurchaseForm').addEventListener('click', openPurchaseForm);
+      contentRoot.querySelector('#openPurchaseForm').addEventListener('click', () => openPurchaseForm());
     }
 
     function openPurchaseHistory() {
@@ -192,12 +200,43 @@ export default {
 
       supplierFilter.addEventListener('change', renderHistory);
       searchFilter.addEventListener('input', renderHistory);
-      tableRoot.addEventListener('click', (event) => {
-        const button = event.target.closest('[data-action="view"]');
-        if (button) viewPurchase(Number(button.dataset.id));
-      });
+      tableRoot.addEventListener('click', handlePurchaseAction);
 
       renderHistory();
+    }
+
+    async function handlePurchaseAction(event) {
+      const button = event.target.closest('[data-action]');
+      if (!button) return;
+      const id = Number(button.dataset.id);
+
+      if (button.dataset.action === 'view') await viewPurchase(id);
+      if (button.dataset.action === 'edit') {
+        try {
+          const response = await api.get(`/purchases/${id}`);
+          openPurchaseForm(response.data);
+        } catch (error) {
+          toast(error.message, 'error');
+        }
+      }
+      if (button.dataset.action === 'delete') await deletePurchase(id);
+    }
+
+    async function deletePurchase(id) {
+      const confirmed = await confirmDialog({
+        title: 'Delete purchase',
+        message: 'Delete this purchase and reverse its stock? This is blocked if the stock has already been sold.',
+        confirmText: 'Delete purchase'
+      });
+      if (!confirmed) return;
+
+      try {
+        const response = await api.delete(`/purchases/${id}`);
+        toast(response.message || 'Purchase deleted.');
+        await load();
+      } catch (error) {
+        toast(error.message, 'error');
+      }
     }
 
     async function viewPurchase(id) {
@@ -251,20 +290,22 @@ export default {
       }
     }
 
-    function openPurchaseForm() {
+    function openPurchaseForm(purchase = null) {
+      const isEdit = Boolean(purchase);
+
       if (!suppliers.length) {
         toast('Register a supplier before recording a purchase.', 'error');
         return;
       }
       if (!fruits.length) {
-        toast('Add at least one active fruit before recording a purchase.', 'error');
+        toast('Add at least one available fruit before recording a purchase.', 'error');
         return;
       }
 
       const supplierOptions = suppliers
         .map(
           (supplier) =>
-            `<option value="${supplier.supplier_id}">${escapeHtml(supplier.business_name)} — ${escapeHtml(supplier.province)}</option>`
+            `<option value="${supplier.supplier_id}" ${Number(purchase?.supplier_id) === Number(supplier.supplier_id) ? 'selected' : ''}>${escapeHtml(supplier.business_name)} — ${escapeHtml(supplier.province)}</option>`
         )
         .join('');
 
@@ -277,8 +318,10 @@ export default {
       ).join('');
 
       const overlay = openModal({
-        title: 'Record purchase',
-        subtitle: 'Purchase multiple fruits in one transaction. Stock increases automatically.',
+        title: isEdit ? 'Edit purchase' : 'Record purchase',
+        subtitle: isEdit
+          ? `Update purchase #${purchase.purchase_id}. Stock is adjusted automatically.`
+          : 'Purchase multiple fruits in one transaction. Stock increases automatically.',
         size: 'xl',
         body: `
           <form id="purchaseForm">
@@ -292,7 +335,7 @@ export default {
               </div>
               <div class="form-field">
                 <label for="purchaseDate">Purchase date <span class="req">*</span></label>
-                <input id="purchaseDate" name="purchase_date" type="date" required value="${todayISO()}">
+                <input id="purchaseDate" name="purchase_date" type="date" required value="${dateInputValue(purchase?.purchase_date) || todayISO()}">
               </div>
               <div class="form-field span-2">
                 <span class="form-help">Enter the quantity, packaging size and unit cost for each fruit. The purchase total is calculated by the system.</span>
@@ -313,7 +356,7 @@ export default {
           </form>`,
         footer: `
           <button type="button" class="btn btn-secondary" data-close>Cancel</button>
-          <button type="submit" form="purchaseForm" class="btn btn-primary" id="savePurchaseBtn">${icon('check', 16)} Record purchase</button>`
+          <button type="submit" form="purchaseForm" class="btn btn-primary" id="savePurchaseBtn">${icon('check', 16)} ${isEdit ? 'Save changes' : 'Record purchase'}</button>`
       });
 
       const form = overlay.querySelector('#purchaseForm');
@@ -334,7 +377,7 @@ export default {
         totalDisplay.textContent = money(total);
       }
 
-      function addItemRow() {
+      function addItemRow(item = null) {
         const row = document.createElement('div');
         row.className = 'line-editor-row';
         row.innerHTML = `
@@ -344,6 +387,13 @@ export default {
           <input class="item-cost" type="number" min="0" step="0.01" placeholder="0.00" required aria-label="Unit cost">
           <div class="line-total">M 0.00</div>
           <button type="button" class="icon-btn remove-row" style="width:32px;height:32px" title="Remove item">${icon('trash', 15)}</button>`;
+
+        if (item) {
+          row.querySelector('.item-fruit').value = item.fruit_id;
+          row.querySelector('.item-size').value = item.packaging_size;
+          row.querySelector('.item-qty').value = item.quantity;
+          row.querySelector('.item-cost').value = item.unit_cost;
+        }
 
         itemsContainer.appendChild(row);
         row.querySelectorAll('input').forEach((input) => input.addEventListener('input', recalculate));
@@ -358,8 +408,12 @@ export default {
         recalculate();
       }
 
-      addItemButton.addEventListener('click', addItemRow);
-      addItemRow();
+      addItemButton.addEventListener('click', () => addItemRow());
+      if (purchase?.items?.length) {
+        purchase.items.forEach((item) => addItemRow(item));
+      } else {
+        addItemRow();
+      }
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -398,14 +452,17 @@ export default {
           return;
         }
 
-        setButtonBusy(saveButton, 'Recording...');
+        setButtonBusy(saveButton, isEdit ? 'Saving...' : 'Recording...');
         try {
-          const response = await api.post('/purchases', {
+          const payload = {
             supplier_id: Number(supplierId),
             purchase_date: purchaseDate,
             items
-          });
-          toast(response.message || 'Purchase recorded successfully.');
+          };
+          const response = isEdit
+            ? await api.put(`/purchases/${purchase.purchase_id}`, payload)
+            : await api.post('/purchases', payload);
+          toast(response.message || (isEdit ? 'Purchase updated successfully.' : 'Purchase recorded successfully.'));
           closeModal();
           await load();
         } catch (error) {
@@ -426,12 +483,12 @@ export default {
       }
     }
 
-    newButton.addEventListener('click', openPurchaseForm);
+    newButton.addEventListener('click', () => openPurchaseForm());
 
     try {
       const [suppliersResponse, fruitsResponse] = await Promise.all([
         api.get('/suppliers'),
-        api.get('/fruits?status=ACTIVE')
+        api.get('/fruits?status=AVAILABLE')
       ]);
       suppliers = suppliersResponse.data;
       fruits = fruitsResponse.data;

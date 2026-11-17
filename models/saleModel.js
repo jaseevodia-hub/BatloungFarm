@@ -85,6 +85,42 @@ async function findByIdForUpdate(connection, id) {
   return rows[0] || null;
 }
 
+async function findDetailsForUpdate(connection, id) {
+  const [rows] = await connection.execute(
+    `SELECT sales_detail_id, fruit_id, packaging_size, quantity, unit_price
+     FROM sales_details WHERE sale_id = ? ORDER BY sales_detail_id ASC`,
+    [id]
+  );
+  return rows;
+}
+
+async function updateHeader(connection, id, data) {
+  await connection.execute(
+    `UPDATE sales
+     SET vendor_id = ?, sale_date = ?, payment_status = ?, payment_method = ?,
+         total_amount = ?, amount_paid = ?
+     WHERE sale_id = ?`,
+    [
+      data.vendorId,
+      data.saleDate,
+      data.paymentStatus,
+      data.paymentMethod,
+      data.totalAmount,
+      data.amountPaid,
+      id
+    ]
+  );
+}
+
+async function removeDetails(connection, id) {
+  await connection.execute('DELETE FROM sales_details WHERE sale_id = ?', [id]);
+}
+
+async function remove(connection, id) {
+  const [result] = await connection.execute('DELETE FROM sales WHERE sale_id = ?', [id]);
+  return result.affectedRows > 0;
+}
+
 async function create(connection, data) {
   const [result] = await connection.execute(
     `INSERT INTO sales
@@ -121,6 +157,10 @@ module.exports = {
   findAll,
   findById,
   findByIdForUpdate,
+  findDetailsForUpdate,
+  updateHeader,
+  removeDetails,
+  remove,
   create,
   addDetail,
   updatePayment

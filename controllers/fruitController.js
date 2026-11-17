@@ -53,7 +53,7 @@ async function createFruit(req, res, next) {
     const data = {
       fruitName: requiredString(req.body.fruit_name, 'Fruit name', 80),
       description: optionalString(req.body.description, 'Description', 255),
-      status: req.body.status ? fruitStatus(req.body.status) : 'ACTIVE'
+      status: req.body.status ? fruitStatus(req.body.status) : 'AVAILABLE'
     };
     const prices = pricesObject(req.body.prices, { required: true });
 
@@ -152,7 +152,7 @@ async function deleteFruit(req, res, next) {
     const references = await fruitModel.countReferences(id);
     if (references > 0) {
       throw ApiError.conflict(
-        'Fruit is used in purchase or sales records and cannot be deleted. Set its status to INACTIVE instead.'
+        'Fruit is used in purchase or sales records and cannot be deleted. Set its status to UNAVAILABLE instead.'
       );
     }
 

@@ -76,8 +76,8 @@ async function createPurchase(req, res, next) {
         [item.fruitId]
       );
       if (!fruits[0]) throw ApiError.badRequest(`Fruit ID ${item.fruitId} does not exist.`);
-      if (fruits[0].status !== 'ACTIVE') {
-        throw ApiError.badRequest(`Fruit "${fruits[0].fruit_name}" is inactive and cannot be purchased.`);
+      if (fruits[0].status !== 'AVAILABLE') {
+        throw ApiError.badRequest(`Fruit "${fruits[0].fruit_name}" is unavailable and cannot be purchased.`);
       }
     }
 
@@ -120,4 +120,151 @@ async function createPurchase(req, res, next) {
   }
 }
 
-module.exports = { listPurchases, getPurchase, createPurchase };
+async function updatePurchase(req, res, next) {
+  let connection;
+  try {
+    const id = positiveId(req.params.id, 'Purchase ID');
+    const supplierId = positiveId(req.body.supplier_id, 'Supplier ID');
+    const purchaseDate = req.body.purchase_date
+      ? dateOnly(req.body.purchase_date, 'Purchase date')
+      : new Date();
+
+    const rawItems = ensureNonEmptyArray(req.body.items, 'Items');
+    const items = rawItems.map((item, index) => ({
+      fruitId: positiveId(item.fruit_id, `Item ${index + 1} fruit ID`),
+      quantity: positiveInteger(item.quantity, `Item ${index + 1} quantity`),
+      unitCost: nonNegativeNumber(item.unit_cost, `Item ${index + 1} unit cost`),
+      packagingSize: packagingSize(item.packaging_size, `Item ${index + 1} packaging size`)
+    }));
+
+    const totalAmount = Math.round(
+      items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0) * 100
+    ) / 100;
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const existing = await purchaseModel.findByIdForUpdate(connection, id);
+    if (!existing) throw ApiError.notFound('Purchase not found.');
+
+    const [suppliers] = await connection.execute(
+      'SELECT supplier_id FROM suppliers WHERE supplier_id = ?',
+      [supplierId]
+    );
+    if (!suppliers[0]) throw ApiError.notFound('Supplier not found.');
+
+    for (const item of items) {
+      const [fruits] = await connection.execute(
+        'SELECT fruit_id, fruit_name, status FROM fruits WHERE fruit_id = ?',
+        [item.fruitId]
+      );
+      if (!fruits[0]) throw ApiError.badRequest(`Fruit ID ${item.fruitId} does not exist.`);
+      if (fruits[0].status !== 'AVAILABLE') {
+        throw ApiError.badRequest(`Fruit "${fruits[0].fruit_name}" is unavailable and cannot be purchased.`);
+      }
+    }
+
+    const oldItems = await purchaseModel.findDetailsForUpdate(connection, id);
+    for (const item of oldItems) {
+      const [result] = await connection.execute(
+        `UPDATE stock
+         SET available_quantity = available_quantity - ?
+         WHERE fruit_id = ? AND packaging_size = ? AND available_quantity >= ?`,
+        [item.quantity, item.fruit_id, item.packaging_size, item.quantity]
+      );
+      if (result.affectedRows !== 1) {
+        throw ApiError.conflict(
+          'Purchase cannot be edited because some of the original stock has already been sold. ' +
+          'Delete is also blocked for the same reason.'
+        );
+      }
+    }
+
+    await purchaseModel.removeDetails(connection, id);
+    await purchaseModel.updateHeader(connection, id, { supplierId, purchaseDate, totalAmount });
+
+    for (const item of items) {
+      await purchaseModel.addDetail(connection, id, item);
+      await connection.execute(
+        `INSERT INTO stock (fruit_id, packaging_size, available_quantity)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           available_quantity = available_quantity + VALUES(available_quantity)`,
+        [item.fruitId, item.packagingSize, item.quantity]
+      );
+    }
+
+    await connection.commit();
+
+    const purchase = await purchaseModel.findById(id);
+    res.status(200).json({
+      success: true,
+      message: 'Purchase updated and stock adjusted successfully.',
+      data: purchase
+    });
+  } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('[rollback]', rollbackError.message);
+      }
+    }
+    next(error);
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
+async function deletePurchase(req, res, next) {
+  let connection;
+  try {
+    const id = positiveId(req.params.id, 'Purchase ID');
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const existing = await purchaseModel.findByIdForUpdate(connection, id);
+    if (!existing) throw ApiError.notFound('Purchase not found.');
+
+    const oldItems = await purchaseModel.findDetailsForUpdate(connection, id);
+    for (const item of oldItems) {
+      const [result] = await connection.execute(
+        `UPDATE stock
+         SET available_quantity = available_quantity - ?
+         WHERE fruit_id = ? AND packaging_size = ? AND available_quantity >= ?`,
+        [item.quantity, item.fruit_id, item.packaging_size, item.quantity]
+      );
+      if (result.affectedRows !== 1) {
+        throw ApiError.conflict(
+          'Purchase cannot be deleted because some of its stock has already been sold. ' +
+          'Reduce the purchase instead.'
+        );
+      }
+    }
+
+    await purchaseModel.remove(connection, id);
+    await connection.commit();
+
+    res.status(200).json({ success: true, message: 'Purchase deleted and stock reversed successfully.' });
+  } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('[rollback]', rollbackError.message);
+      }
+    }
+    next(error);
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
+module.exports = {
+  listPurchases,
+  getPurchase,
+  createPurchase,
+  updatePurchase,
+  deletePurchase
+};

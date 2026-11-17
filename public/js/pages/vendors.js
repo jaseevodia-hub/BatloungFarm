@@ -6,6 +6,7 @@ import {
   escapeHtml,
   formatDate,
   todayISO,
+  dateInputValue,
   loadingState,
   tableEmpty,
   toast,
@@ -48,7 +49,7 @@ export default {
             <td class="nowrap">${escapeHtml(vendor.phone_number)}</td>
             <td>${escapeHtml(vendor.location)}</td>
             <td class="nowrap">${formatDate(vendor.registration_date)}</td>
-            <td class="num">${Number(vendor.outstanding_balance) > 0 ? `<span class="badge unpaid">${money(vendor.outstanding_balance)}</span>` : `<span class="badge active">Settled</span>`}</td>
+            <td class="num">${Number(vendor.outstanding_balance) > 0 ? `<span class="badge unpaid">${money(vendor.outstanding_balance)}</span>` : `<span class="badge available">Settled</span>`}</td>
             <td>
               <div class="actions">
                 <button class="action-btn" data-action="view" data-id="${vendor.vendor_id}" title="View vendor">${icon('eye', 15)}</button>
@@ -275,7 +276,7 @@ export default {
             </div>
             <div class="form-field">
               <label for="vendorDate">Registration date <span class="req">*</span></label>
-              <input id="vendorDate" name="registration_date" type="date" required value="${vendor?.registration_date ? String(vendor.registration_date).slice(0, 10) : todayISO()}">
+              <input id="vendorDate" name="registration_date" type="date" required value="${dateInputValue(vendor?.registration_date) || todayISO()}">
             </div>
           </form>`,
         footer: `

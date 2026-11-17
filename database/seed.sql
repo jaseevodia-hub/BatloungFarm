@@ -22,11 +22,11 @@ VALUES
 -- Fruits
 INSERT INTO fruits (fruit_id, fruit_name, description, status)
 VALUES
-  (1, 'Apples', 'Fresh crisp apples sourced from Western Cape and Free State orchards.', 'ACTIVE'),
-  (2, 'Bananas', 'Ripened bananas supplied from KwaZulu-Natal and Mpumalanga.', 'ACTIVE'),
-  (3, 'Oranges', 'Juicy citrus oranges from Limpopo and Eastern Cape farms.', 'ACTIVE'),
-  (4, 'Mangoes', 'Sweet seasonal mangoes from Limpopo tropical farms.', 'ACTIVE'),
-  (5, 'Grapes', 'Premium table grapes from Western Cape vineyards.', 'ACTIVE');
+  (1, 'Apples', 'Fresh crisp apples sourced from Western Cape and Free State orchards.', 'AVAILABLE'),
+  (2, 'Bananas', 'Ripened bananas supplied from KwaZulu-Natal and Mpumalanga.', 'AVAILABLE'),
+  (3, 'Oranges', 'Juicy citrus oranges from Limpopo and Eastern Cape farms.', 'AVAILABLE'),
+  (4, 'Mangoes', 'Sweet seasonal mangoes from Limpopo tropical farms.', 'AVAILABLE'),
+  (5, 'Grapes', 'Premium table grapes from Western Cape vineyards.', 'AVAILABLE');
 
 -- Selling prices per packaging size (each size has a different price)
 INSERT INTO fruit_prices (fruit_id, packaging_size, selling_price)

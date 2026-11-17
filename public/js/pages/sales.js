@@ -10,11 +10,13 @@ import {
   escapeHtml,
   formatDate,
   todayISO,
+  dateInputValue,
   loadingState,
   tableEmpty,
   toast,
   openModal,
   closeModal,
+  confirmDialog,
   setButtonBusy,
   resetButton,
   errorState
@@ -67,6 +69,8 @@ export default {
             <td>
               <div class="actions">
                 <button class="action-btn" data-action="view" data-id="${sale.sale_id}" title="View sale">${icon('eye', 15)}</button>
+                <button class="action-btn" data-action="edit" data-id="${sale.sale_id}" title="Edit sale">${icon('edit', 15)}</button>
+                <button class="action-btn danger" data-action="delete" data-id="${sale.sale_id}" title="Delete sale">${icon('trash', 15)}</button>
                 ${Number(sale.balance) > 0 ? `<button class="action-btn money" data-action="pay" data-id="${sale.sale_id}" data-balance="${sale.balance}" data-vendor="${escapeHtml(sale.vendor_name)}" title="Record payment">${icon('money', 15)}</button>` : ''}
               </div>
             </td>
@@ -227,6 +231,17 @@ export default {
       if (button.dataset.action === 'view') {
         showSaleDetails(id, { onUpdated: load });
       }
+      if (button.dataset.action === 'edit') {
+        try {
+          const response = await api.get(`/sales/${id}`);
+          openSaleForm(response.data);
+        } catch (error) {
+          toast(error.message, 'error');
+        }
+      }
+      if (button.dataset.action === 'delete') {
+        await deleteSale(id);
+      }
       if (button.dataset.action === 'pay') {
         openRecordPaymentModal({
           saleId: id,
@@ -237,20 +252,39 @@ export default {
       }
     }
 
-    function openSaleForm() {
+    async function deleteSale(id) {
+      const confirmed = await confirmDialog({
+        title: 'Delete sale',
+        message: 'Delete this sale? Its stock will be restored and all linked payments will be removed.',
+        confirmText: 'Delete sale'
+      });
+      if (!confirmed) return;
+
+      try {
+        const response = await api.delete(`/sales/${id}`);
+        toast(response.message || 'Sale deleted.');
+        await load();
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    }
+
+    function openSaleForm(sale = null) {
+      const isEdit = Boolean(sale);
+
       if (!vendors.length) {
         toast('Register a vendor before recording a sale.', 'error');
         return;
       }
       if (!fruits.length) {
-        toast('Add at least one active fruit with selling prices before recording a sale.', 'error');
+        toast('Add at least one available fruit with selling prices before recording a sale.', 'error');
         return;
       }
 
       const vendorOptions = vendors
         .map(
           (vendor) =>
-            `<option value="${vendor.vendor_id}">${escapeHtml(vendor.vendor_name)} — ${escapeHtml(vendor.phone_number)}</option>`
+            `<option value="${vendor.vendor_id}" ${Number(sale?.vendor_id) === Number(vendor.vendor_id) ? 'selected' : ''}>${escapeHtml(vendor.vendor_name)} — ${escapeHtml(vendor.phone_number)}</option>`
         )
         .join('');
 
@@ -263,8 +297,10 @@ export default {
       ).join('');
 
       const overlay = openModal({
-        title: 'Record sale',
-        subtitle: 'Selling prices come from each fruit packaging size. Stock is checked before the sale is saved.',
+        title: isEdit ? 'Edit sale' : 'Record sale',
+        subtitle: isEdit
+          ? `Update sale #${sale.sale_id}. Stock is adjusted automatically; payments stay on the Payments page.`
+          : 'Selling prices come from each fruit packaging size. Stock is checked before the sale is saved.',
         size: 'xl',
         body: `
           <form id="saleForm">
@@ -278,7 +314,7 @@ export default {
               </div>
               <div class="form-field">
                 <label for="saleDate">Sale date <span class="req">*</span></label>
-                <input id="saleDate" name="sale_date" type="date" required value="${todayISO()}">
+                <input id="saleDate" name="sale_date" type="date" required value="${dateInputValue(sale?.sale_date) || todayISO()}">
               </div>
             </div>
 
@@ -294,6 +330,8 @@ export default {
               <div class="editor-total">Sale total <strong id="saleTotal">M 0.00</strong></div>
             </div>
 
+            ${isEdit ? `
+            <div class="payment-note">${icon('info', 15)} Payments and outstanding balances are managed from the Payments page. Editing this sale keeps the amount already paid.</div>` : `
             <div class="payment-fields">
               <div class="form-field">
                 <label for="salePaymentMethod">Payment method <span class="req">*</span></label>
@@ -319,11 +357,11 @@ export default {
                 <label>Balance after this payment</label>
                 <div class="chip ${Number(0) > 0 ? 'warn' : ''}" id="saleBalanceChip" style="align-self:flex-start;min-height:40px;padding:10px 13px;font-size:13px">M 0.00</div>
               </div>
-            </div>
+            </div>`}
           </form>`,
         footer: `
           <button type="button" class="btn btn-secondary" data-close>Cancel</button>
-          <button type="submit" form="saleForm" class="btn btn-primary" id="saveSaleBtn">${icon('check', 16)} Record sale</button>`
+          <button type="submit" form="saleForm" class="btn btn-primary" id="saveSaleBtn">${icon('check', 16)} ${isEdit ? 'Save changes' : 'Record sale'}</button>`
       });
 
       const form = overlay.querySelector('#saleForm');
@@ -338,13 +376,15 @@ export default {
       const saveButton = overlay.querySelector('#saveSaleBtn');
 
       let currentTotal = 0;
-      let previousMethod = paymentMethod.value;
+      let previousMethod = paymentMethod ? paymentMethod.value : null;
 
       function findFruit(id) {
         return fruits.find((fruit) => Number(fruit.fruit_id) === Number(id));
       }
 
       function updatePaymentState() {
+        if (!paymentMethod || !amountPaidInput) return;
+
         const method = paymentMethod.value;
         const wholeSale = method !== 'CREDIT';
 
@@ -410,7 +450,7 @@ export default {
         updatePaymentState();
       }
 
-      function addItemRow() {
+      function addItemRow(item = null) {
         const row = document.createElement('div');
         row.className = 'line-editor-row';
         row.innerHTML = `
@@ -421,6 +461,12 @@ export default {
           <div class="line-total">M 0.00</div>
           <button type="button" class="icon-btn remove-row" style="width:32px;height:32px" title="Remove item">${icon('trash', 15)}</button>
           <div class="line-availability"><span class="available"></span><span class="stock-state"></span></div>`;
+
+        if (item) {
+          row.querySelector('.item-fruit').value = item.fruit_id;
+          row.querySelector('.item-size').value = item.packaging_size;
+          row.querySelector('.item-qty').value = item.quantity;
+        }
 
         itemsContainer.appendChild(row);
         row.querySelectorAll('select, input').forEach((input) => input.addEventListener('input', recalculate));
@@ -435,10 +481,14 @@ export default {
         recalculate();
       }
 
-      addItemButton.addEventListener('click', addItemRow);
-      paymentMethod.addEventListener('change', updatePaymentState);
-      amountPaidInput.addEventListener('input', updatePaymentState);
-      addItemRow();
+      addItemButton.addEventListener('click', () => addItemRow());
+      paymentMethod?.addEventListener('change', updatePaymentState);
+      amountPaidInput?.addEventListener('input', updatePaymentState);
+      if (sale?.items?.length) {
+        sale.items.forEach((item) => addItemRow(item));
+      } else {
+        addItemRow();
+      }
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -475,23 +525,30 @@ export default {
           return;
         }
 
-        const method = paymentMethod.value;
         const payload = {
           vendor_id: Number(vendorId),
           sale_date: saleDate,
-          payment_method: method,
           items
         };
 
-        if (method === 'CREDIT') {
-          payload.amount_paid = Number(amountPaidInput.value) || 0;
-          payload.settlement_method = overlay.querySelector('#saleDepositMethod').value;
+        if (isEdit) {
+          payload.payment_method = sale.payment_method;
+        } else {
+          const method = paymentMethod.value;
+          payload.payment_method = method;
+
+          if (method === 'CREDIT') {
+            payload.amount_paid = Number(amountPaidInput.value) || 0;
+            payload.settlement_method = overlay.querySelector('#saleDepositMethod').value;
+          }
         }
 
-        setButtonBusy(saveButton, 'Recording sale...');
+        setButtonBusy(saveButton, isEdit ? 'Saving...' : 'Recording sale...');
         try {
-          const response = await api.post('/sales', payload);
-          toast(response.message || 'Sale recorded successfully.');
+          const response = isEdit
+            ? await api.put(`/sales/${sale.sale_id}`, payload)
+            : await api.post('/sales', payload);
+          toast(response.message || (isEdit ? 'Sale updated successfully.' : 'Sale recorded successfully.'));
           closeModal();
           await load();
         } catch (error) {
@@ -512,12 +569,12 @@ export default {
       }
     }
 
-    newButton.addEventListener('click', openSaleForm);
+    newButton.addEventListener('click', () => openSaleForm());
 
     try {
       const [vendorsResponse, fruitsResponse] = await Promise.all([
         api.get('/vendors'),
-        api.get('/fruits?status=ACTIVE')
+        api.get('/fruits?status=AVAILABLE')
       ]);
       vendors = vendorsResponse.data;
       fruits = fruitsResponse.data;

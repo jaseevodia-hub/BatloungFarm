@@ -6,9 +6,10 @@ async function findAll(search) {
   const params = [];
 
   if (search) {
-    sql += ` WHERE business_name LIKE ? OR contact_person LIKE ? OR phone LIKE ? OR province LIKE ?`;
     const term = `%${search}%`;
-    params.push(term, term, term, term);
+    const phoneTerm = `%${search.replace(/\s+/g, '')}%`;
+    sql += ` WHERE business_name LIKE ? OR contact_person LIKE ? OR REPLACE(phone, ' ', '') LIKE ? OR province LIKE ?`;
+    params.push(term, term, phoneTerm, term);
   }
 
   sql += ` ORDER BY business_name ASC`;

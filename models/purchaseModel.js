@@ -63,6 +63,40 @@ async function findById(id) {
   return { ...purchaseRows[0], items: details };
 }
 
+async function findByIdForUpdate(connection, id) {
+  const [rows] = await connection.execute(
+    `SELECT purchase_id, supplier_id, purchase_date, total_amount
+     FROM purchases WHERE purchase_id = ? FOR UPDATE`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+async function findDetailsForUpdate(connection, id) {
+  const [rows] = await connection.execute(
+    `SELECT purchase_detail_id, fruit_id, quantity, unit_cost, packaging_size
+     FROM purchase_details WHERE purchase_id = ? ORDER BY purchase_detail_id ASC`,
+    [id]
+  );
+  return rows;
+}
+
+async function updateHeader(connection, id, { supplierId, purchaseDate, totalAmount }) {
+  await connection.execute(
+    `UPDATE purchases SET supplier_id = ?, purchase_date = ?, total_amount = ? WHERE purchase_id = ?`,
+    [supplierId, purchaseDate, totalAmount, id]
+  );
+}
+
+async function removeDetails(connection, id) {
+  await connection.execute('DELETE FROM purchase_details WHERE purchase_id = ?', [id]);
+}
+
+async function remove(connection, id) {
+  const [result] = await connection.execute('DELETE FROM purchases WHERE purchase_id = ?', [id]);
+  return result.affectedRows > 0;
+}
+
 async function create(connection, { supplierId, purchaseDate, totalAmount }) {
   const [result] = await connection.execute(
     `INSERT INTO purchases (supplier_id, purchase_date, total_amount) VALUES (?, ?, ?)`,
@@ -80,4 +114,14 @@ async function addDetail(connection, purchaseId, item) {
   );
 }
 
-module.exports = { findAll, findById, create, addDetail };
+module.exports = {
+  findAll,
+  findById,
+  findByIdForUpdate,
+  findDetailsForUpdate,
+  updateHeader,
+  removeDetails,
+  remove,
+  create,
+  addDetail
+};

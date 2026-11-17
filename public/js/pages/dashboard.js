@@ -122,7 +122,7 @@ export default {
 
       <div class="grid-3" style="margin-top:18px">
         <section class="card">
-          <div class="card-header"><div><h2>Distribution network</h2><p>Active records in the system.</p></div></div>
+          <div class="card-header"><div><h2>Distribution network</h2><p>Current records in the system.</p></div></div>
           <div class="detail-grid">
             <div class="detail-item"><span class="label">Suppliers</span><span class="value">${quantity(dashboard.suppliers)}</span></div>
             <div class="detail-item"><span class="label">Fruit types</span><span class="value">${quantity(dashboard.fruits)}</span></div>

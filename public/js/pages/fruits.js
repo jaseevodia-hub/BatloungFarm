@@ -116,6 +116,7 @@ export default {
               <div class="actions">
                 <button class="action-btn" data-action="view" data-id="${row.fruit_id}" title="View fruit stock">${icon('eye', 15)}</button>
                 <button class="action-btn" data-action="edit" data-id="${row.fruit_id}" title="Edit fruit">${icon('edit', 15)}</button>
+                <button class="action-btn danger" data-action="delete" data-id="${row.fruit_id}" title="Delete fruit">${icon('trash', 15)}</button>
               </div>
             </td>
           </tr>`
@@ -140,7 +141,7 @@ export default {
     }
 
     function renderPage() {
-      const activeCount = fruits.filter((fruit) => fruit.status === 'ACTIVE').length;
+      const availableCount = fruits.filter((fruit) => fruit.status === 'AVAILABLE').length;
       const boxes = totalBoxes(fruits);
 
       contentRoot.innerHTML = `
@@ -151,8 +152,8 @@ export default {
             <div class="stat-meta">Fruits in the catalogue</div>
           </article>
           <article class="stat-card blue">
-            <div class="stat-top"><span class="stat-label">Active fruits</span><span class="stat-icon">${icon('check', 19)}</span></div>
-            <div class="stat-value">${quantity(activeCount)}</div>
+            <div class="stat-top"><span class="stat-label">Available fruits</span><span class="stat-icon">${icon('check', 19)}</span></div>
+            <div class="stat-value">${quantity(availableCount)}</div>
             <div class="stat-meta">Available for purchases and sales</div>
           </article>
           <article class="stat-card ${lowStock.length ? 'red' : ''}">
@@ -210,8 +211,8 @@ export default {
               <label for="fruitStatusFilter">Status</label>
               <select id="fruitStatusFilter">
                 <option value="">All statuses</option>
-                <option value="ACTIVE" ${currentStatus === 'ACTIVE' ? 'selected' : ''}>Active</option>
-                <option value="INACTIVE" ${currentStatus === 'INACTIVE' ? 'selected' : ''}>Inactive</option>
+                <option value="AVAILABLE" ${currentStatus === 'AVAILABLE' ? 'selected' : ''}>Available</option>
+                <option value="UNAVAILABLE" ${currentStatus === 'UNAVAILABLE' ? 'selected' : ''}>Unavailable</option>
               </select>
             </div>
           </div>
@@ -287,7 +288,7 @@ export default {
               <td>${sizeBadge(row.packaging_size)}</td>
               <td class="num">${row.selling_price ? money(row.selling_price) : '—'}</td>
               <td class="num">${quantity(row.available_quantity)} boxes</td>
-              <td>${row.low_stock ? `<span class="badge unpaid">Low stock</span>` : `<span class="badge active">Healthy</span>`}</td>
+              <td>${row.low_stock ? `<span class="badge unpaid">Low stock</span>` : `<span class="badge available">Healthy</span>`}</td>
             </tr>`
           )
           .join('');
@@ -334,8 +335,8 @@ export default {
             <div class="form-field">
               <label for="fruitStatusInput">Status <span class="req">*</span></label>
               <select id="fruitStatusInput" name="status" required>
-                <option value="ACTIVE" ${!fruit || fruit.status === 'ACTIVE' ? 'selected' : ''}>Active</option>
-                <option value="INACTIVE" ${fruit?.status === 'INACTIVE' ? 'selected' : ''}>Inactive</option>
+                <option value="AVAILABLE" ${!fruit || fruit.status === 'AVAILABLE' ? 'selected' : ''}>Available</option>
+                <option value="UNAVAILABLE" ${fruit?.status === 'UNAVAILABLE' ? 'selected' : ''}>Unavailable</option>
               </select>
             </div>
             <div class="form-field span-2">
@@ -407,7 +408,7 @@ export default {
     async function deleteFruit(id) {
       const confirmed = await confirmDialog({
         title: 'Delete fruit',
-        message: 'Delete this fruit? Fruits used in purchases or sales cannot be deleted. Set the fruit to inactive instead.',
+        message: 'Delete this fruit? Fruits used in purchases or sales cannot be deleted. Set the fruit to unavailable instead.',
         confirmText: 'Delete fruit'
       });
       if (!confirmed) return;
