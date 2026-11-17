@@ -66,7 +66,7 @@ export default {
             <td class="nowrap">${escapeHtml(vendor.phone_number)}</td>
             <td>${escapeHtml(vendor.location)}</td>
             <td class="nowrap">${formatDate(vendor.registration_date)}</td>
-            <td class="num">${Number(vendor.outstanding_balance) > 0 ? `<span class="badge unpaid">${money(vendor.outstanding_balance)}</span>` : `<span class="badge available">Settled</span>`}</td>
+            <td class="num">${Number(vendor.outstanding_balance) > 0 ? `<span class="badge unpaid">${money(vendor.outstanding_balance)}</span>` : '<span class="table-sub">&mdash;</span>'}</td>
             <td>
               <div class="actions">
                 <button class="action-btn" data-action="view" data-id="${vendor.vendor_id}" title="View vendor">${icon('eye', 15)}</button>
