@@ -1,6 +1,6 @@
 # Batloung Farm Fresh Produce Distribution Management System
 
-A complete stock, purchasing, sales, payments and reporting system for Batloung Farm, a fresh produce distributor serving vendors across South Africa.
+A complete stock, purchasing, sales, payments and reporting system for Batloung Farm, a fresh produce distributor based in Maseru, Lesotho, sourcing from South African suppliers and selling to vendors across Lesotho.
 
 The application is a Node.js/Express REST API backed by MySQL 8 with a responsive, dependency-free JavaScript frontend. All pages are served by the same Express server.
 
@@ -350,7 +350,7 @@ Every controller uses `async`/`await` with `try/catch` and forwards errors to th
 
 - 9 suppliers covering all nine South African provinces.
 - 5 fruits: Apples, Bananas, Oranges, Mangoes and Grapes.
-- 6 vendors in Lesotho and South Africa.
+- 6 vendors across Lesotho, each with map coordinates.
 - 6 purchases and 12 sales.
 - 11 payment records, including paid, partially paid and unpaid sales.
 - 15 stock rows (5 fruits × 3 packaging sizes).
