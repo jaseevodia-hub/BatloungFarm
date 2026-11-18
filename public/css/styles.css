@@ -156,6 +156,7 @@ strong {
 }
 
 .nav-section-label {
+  display: block;
   margin: 6px 10px 0 6px;
   font-size: 10px;
   font-weight: 700;
