@@ -13,16 +13,16 @@
   <div class="app-shell">
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar" id="sidebar" aria-label="Mobile navigation">
       <a class="brand" href="/dashboard" data-nav>
         <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 64 64" width="28" height="28">
+          <svg viewBox="0 0 64 64" width="26" height="26">
             <path d="M32 48V29M32 34c-8 0-15-5-15-14 9-1 15 4 15 14zm0-6c7 0 13-5 13-13-8-1-13 4-13 13z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </span>
         <span class="brand-copy">
           <strong>Batloung Farm</strong>
-          <small>Distribution System</small>
+          <small>Field Ledger</small>
         </span>
       </a>
 
@@ -41,17 +41,35 @@
     </aside>
 
     <div class="main">
+      <header class="masthead">
+        <div class="masthead-inner">
+          <a class="masthead-brand" href="/dashboard" data-nav>
+            <span class="masthead-mark" aria-hidden="true">B</span>
+            <span class="masthead-wordmark">
+              <strong>Batloung Farm</strong>
+              <small>Field Ledger &middot; Maseru</small>
+            </span>
+          </a>
+
+          <nav class="masthead-nav" id="topNav" aria-label="Primary navigation"></nav>
+
+          <div class="masthead-actions">
+            <span class="masthead-avatar" title="Administrator">BF</span>
+            <button class="icon-btn menu-btn" id="menuToggle" aria-label="Open navigation">
+              <span id="menuIcon"></span>
+            </button>
+          </div>
+        </div>
+      </header>
+
       <header class="topbar">
-        <button class="icon-btn menu-btn" id="menuToggle" aria-label="Open navigation">
-          <span id="menuIcon"></span>
-        </button>
         <div class="topbar-title">
+          <span class="eyebrow" id="pageEyebrow">Overview</span>
           <h1 id="pageTitle">Dashboard</h1>
           <p id="pageSubtitle">A clear view of the farm distribution operation.</p>
         </div>
         <div class="topbar-actions">
           <span class="date-chip" id="todayChip"></span>
-          <span class="avatar" title="Administrator">BF</span>
         </div>
       </header>
 

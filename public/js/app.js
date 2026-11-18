@@ -13,34 +13,42 @@ const pages = { dashboard, suppliers, fruits, vendors, purchases, sales, payment
 const pageMeta = {
   dashboard: {
     title: 'Dashboard',
+    eyebrow: 'Overview · Daily operations',
     subtitle: 'A clear view of the farm distribution operation.'
   },
   suppliers: {
     title: 'Suppliers',
+    eyebrow: 'Directory · South African growers',
     subtitle: 'Manage fruit suppliers across South African provinces.'
   },
   fruits: {
     title: 'Fruits & Stock',
+    eyebrow: 'Catalogue · Prices and stock',
     subtitle: 'Packaging prices and separate stock levels for every fruit.'
   },
   vendors: {
     title: 'Vendors',
+    eyebrow: 'Directory · Lesotho buyers',
     subtitle: 'Street vendors and small retailers buying from Batloung Farm.'
   },
   purchases: {
     title: 'Purchases',
+    eyebrow: 'Inbound · Supplier purchases',
     subtitle: 'Record supplier purchases and automatically increase stock.'
   },
   sales: {
     title: 'Sales',
+    eyebrow: 'Outbound · Vendor sales',
     subtitle: 'Sell fruit by packaging size and track payment status.'
   },
   payments: {
     title: 'Payments',
+    eyebrow: 'Reconciliation · Cash and mobile money',
     subtitle: 'Cash, mobile money and outstanding vendor balances.'
   },
   reports: {
     title: 'Reports',
+    eyebrow: 'Insights · Performance review',
     subtitle: ''
   }
 };
@@ -73,12 +81,18 @@ const navGroups = [
 ];
 
 const navRoot = document.getElementById('mainNav');
+const topNavRoot = document.getElementById('topNav');
 const pageRoot = document.getElementById('page');
 const pageTitle = document.getElementById('pageTitle');
 const pageSubtitle = document.getElementById('pageSubtitle');
+const pageEyebrow = document.getElementById('pageEyebrow');
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const menuToggle = document.getElementById('menuToggle');
+
+const flatNav = navGroups.flatMap((group) =>
+  group.items.map((item) => ({ ...item, group: group.label }))
+);
 
 navRoot.innerHTML = navGroups
   .map(
@@ -93,6 +107,16 @@ navRoot.innerHTML = navGroups
             </a>`
         )
         .join('')}`
+  )
+  .join('');
+
+topNavRoot.innerHTML = flatNav
+  .map(
+    (item, index) => `
+      <a class="top-link" href="/${item.page}" data-nav data-page="${item.page}" title="${item.group} · ${item.label}">
+        <span class="top-link-index">${String(index + 1).padStart(2, '0')}</span>
+        <span class="top-link-label">${item.label}</span>
+      </a>`
   )
   .join('');
 
@@ -113,7 +137,7 @@ function currentPageName() {
 }
 
 function setActiveNav(page) {
-  document.querySelectorAll('.nav-link').forEach((link) => {
+  document.querySelectorAll('.nav-link, .top-link').forEach((link) => {
     link.classList.toggle('active', link.dataset.page === page);
   });
 }
@@ -134,10 +158,14 @@ async function renderCurrentPage() {
 
   setActiveNav(page);
   pageTitle.textContent = meta.title;
+  pageEyebrow.textContent = meta.eyebrow;
   pageSubtitle.textContent = meta.subtitle;
   pageSubtitle.hidden = !meta.subtitle;
   document.title = `${meta.title} · Batloung Farm`;
 
+  pageRoot.classList.remove('page-enter');
+  void pageRoot.offsetWidth;
+  pageRoot.classList.add('page-enter');
   pageRoot.innerHTML = loadingState('Loading data...');
 
   try {

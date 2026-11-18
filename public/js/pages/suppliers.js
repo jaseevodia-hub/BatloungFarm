@@ -27,19 +27,37 @@ export default {
         <button type="button" class="btn btn-primary" id="addSupplierBtn">${icon('plus', 16)} Register supplier</button>
       </div>
 
-      <section class="card">
-        <div class="card-header">
-          <div><h2>Supplier directory</h2><p id="supplierCount">Loading suppliers...</p></div>
-          <div class="card-actions"><button type="button" class="btn btn-secondary btn-sm" id="openSupplierDirectory">${icon('eye', 15)} Open directory</button></div>
-        </div>
-        <div class="card-summary-value">
-          <strong id="supplierTotal">—</strong>
-          <span>Registered suppliers</span>
-        </div>
-      </section>`;
+      <div class="grid-2">
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <span class="card-index">01 / Directory</span>
+              <h2>Supplier directory</h2>
+              <p id="supplierCount">Loading suppliers...</p>
+            </div>
+            <div class="card-actions"><button type="button" class="btn btn-secondary btn-sm" id="openSupplierDirectory">${icon('eye', 15)} Open directory</button></div>
+          </div>
+          <div class="card-summary-value">
+            <strong id="supplierTotal">—</strong>
+            <span>Registered suppliers</span>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <span class="card-index">02 / Coverage</span>
+              <h2>Province coverage</h2>
+              <p>Registered suppliers grouped by province.</p>
+            </div>
+          </div>
+          <div class="bar-list" id="provinceCoverage"></div>
+        </section>
+      </div>`;
 
     const countText = el.querySelector('#supplierCount');
     const totalText = el.querySelector('#supplierTotal');
+    const provinceRoot = el.querySelector('#provinceCoverage');
 
     function filteredSuppliers() {
       const term = currentSearch.trim().toLowerCase();
@@ -101,6 +119,34 @@ export default {
         </div>`;
     }
 
+    function renderProvinceCoverage() {
+      if (!provinceRoot) return;
+
+      const counts = new Map();
+      suppliers.forEach((supplier) => {
+        const province = supplier.province || 'Unassigned';
+        counts.set(province, (counts.get(province) || 0) + 1);
+      });
+
+      const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+      if (!entries.length) {
+        provinceRoot.innerHTML = `<p class="table-sub">No suppliers registered yet.</p>`;
+        return;
+      }
+
+      const max = entries[0][1];
+      provinceRoot.innerHTML = entries
+        .map(
+          ([province, count], index) => `
+          <div class="bar-row">
+            <div class="bar-label"><span class="rank ${index === 0 ? 'top' : ''}">${index + 1}</span><span>${escapeHtml(province)}</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.max((count / max) * 100, 3)}%"></div></div>
+            <div class="bar-value">${quantity(count)} supplier${count === 1 ? '' : 's'}</div>
+          </div>`
+        )
+        .join('');
+    }
+
     async function load() {
       try {
         const response = await api.get('/suppliers');
@@ -108,6 +154,7 @@ export default {
         const rows = filteredSuppliers();
         countText.textContent = `${rows.length} supplier${rows.length === 1 ? '' : 's'}${currentProvince ? ` in ${currentProvince}` : ' across South Africa'}.`;
         totalText.textContent = quantity(suppliers.length);
+        renderProvinceCoverage();
         renderDirectory();
       } catch (error) {
         toast(error.message, 'error');
