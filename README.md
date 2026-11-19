@@ -6,7 +6,7 @@ The application is a Node.js/Express REST API backed by MySQL 8 with a responsiv
 
 **Local URL:** http://localhost:3000
 
-**Demonstration video:** https://batloung-farm-demo-video.netlify.app
+**Demonstration video:** [Watch the Batloung Farm demo](https://files.catbox.moe/tncfuk.mp4) (21 min, 1080p)
 
 ## Features
 
@@ -453,6 +453,8 @@ The application is ready to deploy to any Node.js host with a MySQL 8 database. 
 - Run `npm run db:init` only when you intend to reset the database. Back up production data first.
 
 ## Demo Video Outline
+
+Recorded walkthrough: [https://files.catbox.moe/tncfuk.mp4](https://files.catbox.moe/tncfuk.mp4)
 
 1. Show the dashboard metrics and low-stock alerts.
 2. Create a supplier, edit it and search the list.

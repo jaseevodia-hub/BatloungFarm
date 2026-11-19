@@ -1,0 +1,15 @@
+[build]
+  publish = "public"
+
+# Proxy API calls to the Railway backend so the static site stays same-origin.
+[[redirects]]
+  from = "/api/*"
+  to = "https://web-production-b22a3326.up.railway.app/api/:splat"
+  status = 200
+  force = true
+
+# Single-page app fallback for client-side routes.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
